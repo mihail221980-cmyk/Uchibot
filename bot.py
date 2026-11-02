@@ -34,13 +34,12 @@ def send_welcome(message):
 def handle_message(message):
     headers = {"Authorization": f"Bearer {OPENROUTER_KEY}", "Content-Type": "application/json"}
     
-    # ИСПРАВЛЕННЫЙ БЛОК DATA (с fallback-моделями)
+    # ОБНОВЛЕННЫЙ БЛОК DATA (стабильные бесплатные модели)
     data = {
         "models": [
-            "openrouter/free",
-            "google/gemini-2.0-flash-exp:free",
-            "meta-llama/llama-3.3-70b-instruct:free",
-            "deepseek/deepseek-chat-v3-0324:free"
+            "google/gemma-4-31b-it:free",
+            "nvidia/nemotron-3-super-120b-a12b:free",
+            "openrouter/free"
         ],
         "route": "fallback",
         "messages": [
@@ -52,12 +51,17 @@ def handle_message(message):
     try:
         response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data)
         result = response.json()
-        if 'choices' in result:
+        
+        # Проверка: есть ли ответ и не пустой ли он
+        if 'choices' in result and len(result['choices']) > 0 and result['choices'][0]['message']['content']:
             bot.reply_to(message, result['choices'][0]['message']['content'])
         else:
+            # Если ответ пустой, выводим ошибку для логов и заглушку для пользователя
+            print(f"ОШИБКА ОТ OPENROUTER: {result}") 
             bot.reply_to(message, "Ой, нейросеть перегружена. Попробуй позже!")
+            
     except Exception as e:
-        print(e)
+        print(f"СИСТЕМНАЯ ОШИБКА: {e}")
         bot.reply_to(message, "Ой, что-то сломалось.")
 
 # Запуск бота в фоне, чтобы Flask работал
