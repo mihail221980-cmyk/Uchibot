@@ -1,13 +1,13 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import telebot
 import requests
 import os
 import threading
 from flask import Flask
 
-# ТВОИ КЛЮЧИ
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
-OPENROUTER_KEY = os.environ.get("OPENROUTER_KEY", "")
+# БЕЗОПАСНОЕ ЧТЕНИЕ КЛЮЧЕЙ (из настроек Render)
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+OPENROUTER_KEY = os.environ.get("OPENROUTER_KEY")
 
 # ТВОЙ ПРОМПТ
 SYSTEM_PROMPT = "Ты — UchiBot, дружелюбный школьный репетитор. Общайся на равных, объясняй темы простыми словами. Не давай готовых ответов на домашку, а задавай наводящие вопросы и подсказывай, как решать. Если ученик спрашивает что-то не по учебе, можешь ответить кратко, но добавь 1-2 интересных факта по теме. ОБЯЗАТЕЛЬНОЕ ПРАВИЛО: Ты общаешься ТОЛЬКО на русском языке. Английские слова используй только для заданий по английскому. Твои ответы должны быть понятными для учеников 5-9 классов."
@@ -33,10 +33,22 @@ def send_welcome(message):
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     headers = {"Authorization": f"Bearer {OPENROUTER_KEY}", "Content-Type": "application/json"}
+    
+    # ИСПРАВЛЕННЫЙ БЛОК DATA (с fallback-моделями)
     data = {
-        "model": "openrouter/free", 
-        "messages": [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": message.text}]
+        "models": [
+            "openrouter/free",
+            "google/gemini-2.0-flash-exp:free",
+            "meta-llama/llama-3.3-70b-instruct:free",
+            "deepseek/deepseek-chat-v3-0324:free"
+        ],
+        "route": "fallback",
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT}, 
+            {"role": "user", "content": message.text}
+        ]
     }
+    
     try:
         response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data)
         result = response.json()
